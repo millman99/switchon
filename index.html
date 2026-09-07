@@ -107,6 +107,18 @@ input,select,textarea{font-family:inherit; font-size:15px; color:var(--ink);}
 }
 .seg button.sel{background:var(--on); border-color:var(--on); color:#fff; font-weight:700;}
 
+/* ── 통증 입력 칩 (슬라이더 대체: 세로 스크롤과 충돌하지 않음) ── */
+.painchips{display:grid; grid-template-columns:repeat(6,1fr); gap:6px;}
+.painchip{
+  border:1px solid var(--line); background:#fff; border-radius:10px;
+  padding:10px 0; font-size:14.5px; font-weight:700; color:var(--sub);
+}
+.painchip.sel{background:var(--on); border-color:var(--on); color:#fff;}
+.painscale{font-size:11.5px; color:var(--sub); margin-top:8px;}
+@media (max-width:380px){ .painchips{grid-template-columns:repeat(4,1fr);} }
+
+.field input:disabled{background:#F1F4F2; color:#9DB3A8;}
+
 .btn{border:0; border-radius:11px; padding:11px 16px; font-size:14px; font-weight:700;}
 .btn-primary{background:var(--on); color:#fff;}
 .btn-ghost{background:#fff; border:1px solid var(--line); color:var(--ink);}
@@ -297,6 +309,7 @@ table.stats td:first-child{font-weight:700;}
               <button data-v="fast">단식</button>
               <button data-v="out">외식</button>
               <button data-v="home">집밥</button>
+              <button data-v="box">도시락</button>
             </div>
           </div>
           <div class="field" style="margin-top:8px;"><label>점심 뭘 드셨나요</label><input type="text" id="lunchWhat" placeholder="예: 잡곡밥 반+구운 고등어+나물"></div>
@@ -305,15 +318,17 @@ table.stats td:first-child{font-weight:700;}
               <button data-v="fast">단식</button>
               <button data-v="out">외식</button>
               <button data-v="home">집밥</button>
+              <button data-v="box">도시락</button>
             </div>
           </div>
           <div class="field" style="margin-top:8px;"><label>저녁 뭘 드셨나요</label><input type="text" id="dinnerWhat" placeholder="예: 닭가슴살+오이+두부"></div>
-          <div class="field" style="margin-top:12px;"><label>무릎 통증 (0 없음 ~ 10 심함)</label>
-            <div class="slider-row"><input type="range" min="0" max="10" value="0" id="painKnee"><span class="val" id="painKneeVal">0</span></div>
+          <div class="field" style="margin-top:12px;"><label>무릎 통증</label>
+            <div class="painchips" id="painKneeChips"></div>
           </div>
           <div class="field"><label>어깨(오십견) 통증</label>
-            <div class="slider-row"><input type="range" min="0" max="10" value="0" id="painShoulder"><span class="val" id="painShoulderVal">0</span></div>
+            <div class="painchips" id="painShoulderChips"></div>
           </div>
+          <div class="painscale">0 없음 · 4 신경 쓰임 · 7 일상 지장 · 10 극심 · 같은 숫자를 다시 누르면 해제</div>
           <div class="field" style="margin-top:8px;"><label>메모 (컨디션·특이사항)</label><textarea id="memo" placeholder="예: 오후 3시경 가벼운 어지럼, 물+소금 후 호전 / 컨디션 좋음 / 두통 있음"></textarea></div>
           <div class="btn-row savebar">
             <button class="btn btn-primary" id="saveDay">기록 저장</button>
@@ -631,11 +646,13 @@ function toHM(min){ min=((min%1440)+1440)%1440; const h=Math.floor(min/60),m=min
 /* 공복(단식) 시작 시각부터 다음날 첫 끼(아침 단백질 음료)까지의 실제 시간을 계산 — 문구가 실제 설정과 항상 일치하도록 */
 function fastWindowInfo(ds){
   const nextDs=addDays(ds,1);
-  const breakfastId=(stageOf(nextDs)==='s1')?'shake1':'shakeAM';
+  const nst=stageOf(nextDs);
+  /* 다음날이 24시간 단식일이면 첫 끼는 아침 음료가 아니라 단식 종료(저녁)다 */
+  const nextFast = !!(nst && nst!=='s1' && nst!=='s2' && isFast(nextDs));
+  const breakfastId = nextFast ? 'fastEnd' : ((nst==='s1')?'shake1':'shakeAM');
   const startT=getTime('fastStart'), endT=getTime(breakfastId);
   let diff=(1440-toMin(startT))+toMin(endT);
-  const hrs=diff/60;
-  return {endT, hrs};
+  return {endT, hrs:diff/60, nextFast};
 }
 
 /* ═══════════════ 플랜 생성 ═══════════════ */
@@ -667,7 +684,7 @@ function buildPlan(ds){
     }else{
       const offDay=isOffDay(ds);
       const offTag=offDay?(isHoliday(ds)?holidayName(ds)+' · ':'주말 · '):'';
-      add('shakeAM',getTime('shakeAM'),'아침: 단백질 음료',st==='s3'||st==='s4'||st==='s5'?'2주차부터 오전 블랙커피 1잔 허용 (이때 함께)':'커피는 아직 금지 (2주차부터)');
+      add('shakeAM',getTime('shakeAM'),'아침: 단백질 음료',(st==='s3'||st==='s4'||st==='s5'||st==='maint')?'물 또는 무가당 두유에. 오전 블랙커피 1잔 함께 가능':'물 또는 무가당 두유에 타서');
       const lunchSub={s2:'잡곡밥 반 공기 + 두부·생선·닭가슴살·달걀 등. 식품 탭 참고',s3:'2단계와 동일한 저탄수 점심',s4:'저탄수 점심 (토마토 허용 시작)',s5:'저탄수 점심'};
       if(offDay){
         add('lunch',getTime('lunch'),'점심: 외식/집밥 저탄수 선택',offTag+(WEEKEND_TIP[st]||WEEKEND_TIP.s2));
@@ -681,13 +698,17 @@ function buildPlan(ds){
       }else if(st==='s2') add('dinner',getTime('dinner'),'저녁: 단백질 음료','4~7일차는 저녁도 음료');
       else if(st==='s5'||st==='maint') add('dinner',getTime('dinner'),'저녁: 저탄수 식사','단백질·채소 위주로 충분히');
       else add('dinner',getTime('dinner'),'저녁: 무탄수 식사','등푸른 생선, 수육·샤브샤브 등 배부르게. 국물·양념장 제외');
-      add('workout',getTime('workout'),'저녁 운동: 빠르게 걷기 20~30분','현재 근력운동은 하지 않음 — 인터벌(3분 보통+2분 빠르게) 걷기로 대체. 무릎 통증 4점↑이면 절반만');
+      add('workout',getTime('workout'),'저녁 운동: 빠르게 걷기 20~30분','인터벌 방식 — 3분 보통 + 2분 빠르게 반복. 무릎 통증 4점 이상인 날은 절반만');
     }
     add('noSnack','저녁후','식후 과자 끊기 체크','기존 습관 대체: 따뜻한 허브티 + 양치질');
   }
   add('suppPM',getTime('suppPM'),'저녁 영양제 (오메가3 등)','');
   const fw=fastWindowInfo(ds);
-  add('fastStart',getTime('fastStart'),'공복 시작 (다음날 '+fw.endT+'까지, 약 '+(Number.isInteger(fw.hrs)?fw.hrs:fw.hrs.toFixed(1))+'시간)','저녁은 취침 4시간 전 완료. 시간은 설정 탭에서 조정할 수 있습니다');
+  const fwH=Number.isInteger(fw.hrs)?fw.hrs:fw.hrs.toFixed(1);
+  add('fastStart',getTime('fastStart'),
+    '공복 시작 (다음날 '+fw.endT+'까지, 약 '+fwH+'시간)'+(fw.nextFast?' · 내일 단식일':''),
+    fw.nextFast?'내일은 24시간 단식일입니다. 오늘 저녁을 단백질 위주로 충분히 드세요'
+               :'저녁은 취침 4시간 전 완료. 시간은 설정 탭에서 조정할 수 있습니다');
   add('stretch',getTime('stretch'),'오십견 스트레칭 10분','진자운동(펜듈럼) → 벽 타고 손 오르기 → 타월 스트레치 순서로 천천히. 통증 심한 날은 강도를 절반으로 줄이기');
   add('record',getTime('record'),'저녁 체중 · 통증 점수 · 수면 기록','기록란 입력 후 저장');
   add('sleep',getTime('sleep'),'취침','자정~새벽 4시 필수 포함, 6시간 이상');
@@ -855,14 +876,49 @@ function renderTodayForm(){
   setVal('sleepBed',rec.sleepBed); setVal('sleepWake',rec.sleepWake);
   setVal('nocturia',rec.nocturia); setVal('steps',rec.steps); setVal('memo',rec.memo);
   setVal('lunchWhat',rec.lunchWhat); setVal('dinnerWhat',rec.dinnerWhat);
-  setRange('painKnee',rec.painKnee); setRange('painShoulder',rec.painShoulder);
+  renderPainChips('painKnee'); renderPainChips('painShoulder');
   document.querySelectorAll('#lunchSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.v===rec.lunch));
   document.querySelectorAll('#dinnerSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.v===rec.dinner));
+  if(typeof applyMealLock==='function'){ applyMealLock('lunch'); applyMealLock('dinner'); }
+  renderWeightHint('wAM','weightAM'); renderWeightHint('wPM','weightPM');
   const dv=document.getElementById('devState');
   dv.innerHTML=rec.deviation?`⚠️ 이탈 기록됨: <b>${rec.deviation==='meal'?'한 끼':'하루'}</b> — 다음날 플랜에 복귀 미션이 표시됩니다.`:'';
 }
 function setVal(id,v){ document.getElementById(id).value=(v===undefined||v===null)?'':v; }
-function setRange(id,v){ const el=document.getElementById(id); el.value=v||0; document.getElementById(id+'Val').textContent=v||0; }
+/* 선택한 날짜 이전의 가장 최근 기록값 */
+function lastWeight(key,beforeDs){
+  const ks=Object.keys(db.days).filter(k=>k<beforeDs&&db.days[k]&&db.days[k][key]).sort();
+  if(!ks.length) return null;
+  const k=ks[ks.length-1];
+  return {ds:k, v:db.days[k][key]};
+}
+/* 입력칸은 항상 빈칸으로 두고, 직전 기록값은 회색 힌트(placeholder)로만 보여준다.
+   값을 미리 채우면 손대지 않은 날도 기록으로 남아 그래프가 왜곡된다. */
+function renderWeightHint(id,key){
+  const inp=document.getElementById(id); if(!inp) return;
+  let ref=lastWeight(key,selDate), when=null;
+  if(ref){
+    when=(ref.ds===addDays(selDate,-1))?'어제'
+        :(Number(ref.ds.slice(5,7))+'/'+Number(ref.ds.slice(8,10)));
+  }else if(key==='weightPM'){
+    const am=dayRec(selDate).weightAM;
+    if(am){ ref={v:am}; when='오늘 아침'; }
+  }
+  inp.placeholder = ref ? (when+' '+ref.v)
+                        : (key==='weightAM'?'예: 88.4':'예: 89.1');
+}
+
+/* 통증 입력: 0~10 칩. 같은 값을 다시 누르면 해제되어 '0점'과 '미입력'이 구분된다 */
+function renderPainChips(id){
+  const el=document.getElementById(id+'Chips'); if(!el) return;
+  const cur=dayRec(selDate)[id];
+  el.innerHTML=Array.from({length:11},(_,i)=>
+    '<button type="button" class="painchip'+(cur===i?' sel':'')+'" data-v="'+i+'">'+i+'</button>').join('');
+  el.querySelectorAll('.painchip').forEach(b=>b.onclick=()=>{
+    const r=dayRec(selDate), v=Number(b.dataset.v);
+    r[id]=(r[id]===v)?undefined:v; save(); renderPainChips(id);
+  });
+}
 
 /* ═══════════════ 렌더: 식품 탭 ═══════════════ */
 function renderFood(){
@@ -1160,7 +1216,7 @@ function copyText(){
     if(r.weightAM||r.weightPM) t+='  체중: 아침 '+(r.weightAM||'-')+'kg / 저녁 '+(r.weightPM||'-')+'kg\n';
     if(r.sleepBed||r.sleepWake||r.nocturia!==undefined) t+='  수면: '+(r.sleepBed||'?')+'~'+(r.sleepWake||'?')+' · 야간뇨 '+(r.nocturia??'-')+'회\n';
     if(r.steps) t+='  걸음: '+r.steps+'보\n';
-    const CH={fast:'단식',out:'외식',home:'집밥'};
+    const CH={fast:'단식',out:'외식',home:'집밥',box:'도시락'};
     if(r.lunch) t+='  점심: '+(CH[r.lunch]||r.lunch)+(r.lunchWhat?' — '+r.lunchWhat:'')+'\n';
     if(r.dinner) t+='  저녁: '+(CH[r.dinner]||r.dinner)+(r.dinnerWhat?' — '+r.dinnerWhat:'')+'\n';
     if(r.painKnee||r.painShoulder) t+='  통증: 무릎 '+(r.painKnee||0)+' / 어깨 '+(r.painShoulder||0)+'\n';
@@ -1194,21 +1250,30 @@ document.getElementById('goToday').onclick=()=>{selDate=todayStr(); renderToday(
 /* 물 버튼: 물 카운터만 다시 그림 — 저장 전 다른 입력값은 건드리지 않음 */
 document.getElementById('waterPlus').onclick=()=>{const r=dayRec(selDate); r.water=Math.min(12,(r.water||0)+1); save(); renderWaterCups();};
 document.getElementById('waterMinus').onclick=()=>{const r=dayRec(selDate); r.water=Math.max(0,(r.water||0)-1); save(); renderWaterCups();};
-/* 통증 슬라이더: 라벨 갱신 + 즉시 자동저장 (전체 재렌더 없음) */
-['painKnee','painShoulder'].forEach(id=>{
-  document.getElementById(id).oninput=e=>{
-    document.getElementById(id+'Val').textContent=e.target.value;
-    const r=dayRec(selDate); r[id]=Number(e.target.value); save();
-  };
-});
 /* 점심/저녁 선택(단식·외식·집밥): 버튼 선택 표시만 갱신 — 폼 전체를 다시 그리지 않음 */
-document.querySelectorAll('#lunchSeg button').forEach(b=>b.onclick=()=>{
-  const r=dayRec(selDate); r.lunch=(r.lunch===b.dataset.v)?undefined:b.dataset.v; save();
-  document.querySelectorAll('#lunchSeg button').forEach(x=>x.classList.toggle('sel',x.dataset.v===r.lunch));
-});
-document.querySelectorAll('#dinnerSeg button').forEach(b=>b.onclick=()=>{
-  const r=dayRec(selDate); r.dinner=(r.dinner===b.dataset.v)?undefined:b.dataset.v; save();
-  document.querySelectorAll('#dinnerSeg button').forEach(x=>x.classList.toggle('sel',x.dataset.v===r.dinner));
+const MEAL_PH={lunch:'예: 잡곡밥 반+구운 고등어+나물',dinner:'예: 닭가슴살+오이+두부'};
+/* 단식을 고른 끼니는 내용 입력칸을 잠근다 */
+function applyMealLock(which){
+  const rec=dayRec(selDate);
+  const inp=document.getElementById(which+'What');
+  if(!inp) return;
+  const locked=(rec[which]==='fast');
+  inp.disabled=locked;
+  inp.placeholder=locked?'단식 — 입력하지 않습니다':MEAL_PH[which];
+  if(locked&&inp.value) inp.value='';
+}
+['lunch','dinner'].forEach(which=>{
+  document.querySelectorAll('#'+which+'Seg button').forEach(b=>b.onclick=()=>{
+    const r=dayRec(selDate);
+    const next=(r[which]===b.dataset.v)?undefined:b.dataset.v;
+    if(next==='fast'&&r[which+'What']){
+      if(!confirm('단식으로 바꾸면 입력해 둔 내용이 지워집니다. 진행할까요?')) return;
+      r[which+'What']=undefined;
+    }
+    r[which]=next; save();
+    document.querySelectorAll('#'+which+'Seg button').forEach(x=>x.classList.toggle('sel',x.dataset.v===r[which]));
+    applyMealLock(which);
+  });
 });
 /* 체중·수면·걸음·메모·식사내용: 입력하는 즉시 자동저장 (다른 버튼을 눌러도 값이 지워지지 않음) */
 const FIELD_MAP={wAM:'weightAM',wPM:'weightPM',sleepBed:'sleepBed',sleepWake:'sleepWake',nocturia:'nocturia',steps:'steps',memo:'memo',lunchWhat:'lunchWhat',dinnerWhat:'dinnerWhat'};
@@ -1222,8 +1287,7 @@ document.getElementById('saveDay').onclick=()=>{
   r.weightAM=val('wAM'); r.weightPM=val('wPM');
   r.sleepBed=val('sleepBed'); r.sleepWake=val('sleepWake');
   r.nocturia=val('nocturia'); r.steps=val('steps'); r.memo=val('memo');
-  r.painKnee=Number(document.getElementById('painKnee').value);
-  r.painShoulder=Number(document.getElementById('painShoulder').value);
+  /* 통증은 칩을 누르는 시점에 이미 저장되므로 여기서 다시 읽지 않는다 */
   save();
   const m=document.getElementById('savedMsg'); m.textContent='저장됨 ✓';
   setTimeout(()=>m.textContent='',2000);
