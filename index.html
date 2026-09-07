@@ -83,6 +83,16 @@ input,select,textarea{font-family:inherit; font-size:15px; color:var(--ink);}
 .plan-item.done .chk{background:var(--on); border-color:var(--on);}
 .plan-item.recovery{background:var(--danger-soft); border-radius:10px; padding:11px 8px; border-bottom:0; margin:4px 0;}
 .plan-item.recovery .time{color:var(--danger);}
+.plan-item .time .act{display:block; font-weight:600; font-size:11px; color:var(--sub); margin-top:2px;}
+.plan-item .time .act i{font-style:normal; color:var(--fast);}
+.plan-item .tedit{width:60px; flex-shrink:0; border:1px solid var(--on); border-radius:8px; padding:4px; font-size:12px; background:#fff;}
+.realfast{font-size:12.5px; color:var(--sub); background:var(--on-soft); border-radius:9px; padding:7px 11px; margin-bottom:10px;}
+.realfast:empty{display:none;}
+.realfast b{color:var(--on-deep);}
+.pausebox{background:#F2F4F3; border:1px dashed var(--line); border-radius:12px; padding:14px;}
+.pausebox b{display:block; font-size:14px; margin-bottom:4px;}
+.pausebox span{display:block; font-size:12.5px; color:var(--sub); margin-top:3px;}
+.cal .day.paused{background:repeating-linear-gradient(45deg,#EDF0EE,#EDF0EE 4px,#F7F9F8 4px,#F7F9F8 8px); color:#9DB3A8;}
 
 /* ── 물 카운터 ── */
 .water{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
@@ -165,6 +175,17 @@ table.stats{width:100%; border-collapse:collapse; font-size:12.5px;}
 table.stats th,table.stats td{border-bottom:1px solid var(--line); padding:7px 4px; text-align:center;}
 table.stats th{color:var(--sub); font-weight:700; font-size:11.5px;}
 table.stats td:first-child{font-weight:700;}
+.chart-wrap{touch-action:pan-y; cursor:grab; user-select:none;}
+.chart-nav{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;}
+.chart-nav button{background:#fff; border:1px solid var(--line); border-radius:8px; width:34px; height:30px;}
+.chart-nav button:disabled{opacity:.35;}
+.chart-nav span{font-size:12px; color:var(--sub); font-weight:600;}
+.bodysum{border-radius:10px; padding:11px 13px; margin:12px 0 0; background:#F4F7F5; border:1px solid var(--line);}
+.bodysum.good{background:var(--on-soft); border-color:#BEDFD3;}
+.bodysum.warn{background:var(--fast-soft); border-color:#E9D3A8;}
+.bodysum.bad{background:var(--danger-soft); border-color:#EBC4BF;}
+.bodysum b{display:block; font-size:13.5px;}
+.bodysum span{display:block; font-size:12.5px; color:var(--sub); margin-top:3px;}
 
 /* ── 설정 ── */
 .set-row{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); flex-wrap:wrap;}
@@ -278,7 +299,9 @@ table.stats td:first-child{font-weight:700;}
     <div class="two-pane">
       <div>
         <div class="card">
-          <h2>시간대별 플랜 <span class="tag" id="planTag"></span></h2>
+          <h2>시간대별 플랜 <span class="tag" id="planTag"></span>
+            <button class="mini-btn" id="timeEditBtn" style="margin-left:auto;">시간 한번에 입력</button></h2>
+          <div class="realfast" id="realFast"></div>
           <div id="planList"></div>
         </div>
         <div class="card">
@@ -396,16 +419,40 @@ table.stats td:first-child{font-weight:700;}
       <p class="muted" style="margin:8px 0 0;">날짜를 누르면 그 날의 기록을 열람·수정할 수 있습니다.</p>
     </div>
     <div class="card">
-      <h2>체중 추이 <span class="muted" style="font-weight:500;">아침(진한 선) / 저녁(연한 선), 전체 기간 · 가로 스크롤</span></h2>
-      <div class="seg" id="weightViewSeg" style="margin-bottom:10px;">
-        <button data-v="daily" class="sel">일별 (전체 기간)</button>
-        <button data-v="weekly">주별 평균 (전체 기간)</button>
+      <h2>체중 추이 <span class="muted" style="font-weight:500;">굵은 선 = 7일 이동평균</span></h2>
+      <div class="seg" id="rangeSeg" style="margin-bottom:8px;">
+        <button data-v="14">2주</button>
+        <button data-v="30" class="sel">1개월</button>
+        <button data-v="90">3개월</button>
+        <button data-v="0">전체</button>
       </div>
-      <div style="overflow-x:auto;"><div id="weightChart"></div></div>
+      <div class="chart-nav"><button id="rPrev">‹</button><span id="rangeLabel"></span><button id="rNext">›</button></div>
+      <div class="chart-wrap" id="weightChartWrap"><div id="weightChart"></div></div>
+      <p class="muted" style="margin:8px 0 0;">아침(진한 점) / 저녁(연한 점) · 회색 구간은 휴지·수분 회복 기간 · 그래프를 좌우로 끌어 기간을 옮길 수 있습니다.</p>
     </div>
     <div class="card">
-      <h2>통증 추이 <span class="muted" style="font-weight:500;">무릎(적색) / 어깨(청색), 전체 기간 · 가로 스크롤</span></h2>
-      <div style="overflow-x:auto;"><div id="painChart"></div></div>
+      <h2>통증 추이 <span class="muted" style="font-weight:500;">무릎(적색) / 어깨(청색) · 위 기간 설정을 따릅니다</span></h2>
+      <div class="chart-wrap" id="painChartWrap"><div id="painChart"></div></div>
+    </div>
+    <div class="card">
+      <h2>체성분 <span class="tag">주 1회</span></h2>
+      <p class="muted" style="margin:0 0 10px;">월요일 아침 공복·배뇨 후 측정을 기준으로 합니다. 1~2일 차이는 같은 주로 묶입니다. 임피던스 방식은 수분 상태에 민감하므로 단일 측정보다 추세로 보세요.</p>
+      <div class="grid2">
+        <div class="field"><label>측정일</label><input type="date" id="bodyDate"></div>
+        <div class="field"><label>체중 (kg)</label><input type="number" step="0.1" inputmode="decimal" id="bWeight" placeholder="예: 88.4"></div>
+        <div class="field"><label>체지방률 (%)</label><input type="number" step="0.1" inputmode="decimal" id="bFat" placeholder="예: 26.1"></div>
+        <div class="field"><label>골격근량 (kg)</label><input type="number" step="0.1" inputmode="decimal" id="bMuscle" placeholder="예: 34.2"></div>
+        <div class="field"><label>뼈질량 (kg)</label><input type="number" step="0.01" inputmode="decimal" id="bBone" placeholder="예: 3.10"></div>
+        <div class="field"><label>체수분률 (%)</label><input type="number" step="0.1" inputmode="decimal" id="bWater" placeholder="예: 54.3"></div>
+      </div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-primary" id="bodySave">체성분 저장</button>
+        <button class="btn btn-ghost" id="bodyDelete">이 날짜 삭제</button>
+        <span class="saved-msg" id="bodyMsg"></span>
+      </div>
+      <div id="bodySummary"></div>
+      <div class="chart-wrap" id="bodyChartWrap"><div id="bodyChart"></div></div>
+      <div style="overflow-x:auto;"><table class="stats" id="bodyTable"></table></div>
     </div>
     <div class="card">
       <h2>주간 통계</h2>
@@ -438,6 +485,19 @@ table.stats td:first-child{font-weight:700;}
       <h2>24시간 단식일 관리</h2>
       <p class="muted" style="margin:0 0 10px;">주차별 횟수(2주차 1회 → 3주차 2회 → 4주차 3회 → 유지기 주 2회, 월·금 기본)에 맞춰 자동 추천됩니다. 회식 등 일정이 있으면 항목의 버튼으로 다른 날로 바꾸세요. 연속 이틀 단식은 자동으로 방지됩니다.</p>
       <div class="fastday-list" id="fastList"></div>
+    </div>
+    <div class="card">
+      <h2>휴지 기간 관리 <span class="tag">여행·명절</span></h2>
+      <p class="muted" style="margin:0 0 10px;">3일 이상 프로그램을 벗어나는 기간을 등록하세요. 그 기간은 플랜과 통계에서 빠지고 일차 계산도 멈춥니다. 복귀 후에는 기간에 비례해 재적응 구간이 자동 적용됩니다 (3~4일 → 1일, 5~7일 → 3일, 8~14일 → 1주, 15일 이상 → 2주).</p>
+      <div class="grid2">
+        <div class="field"><label>시작일</label><input type="date" id="pauseFrom"></div>
+        <div class="field"><label>종료일</label><input type="date" id="pauseTo"></div>
+      </div>
+      <div class="field" style="margin-top:8px;"><label>사유</label>
+        <select id="pauseReason"><option>여행</option><option>출장</option><option>명절</option><option>질병</option><option>경조사</option></select>
+      </div>
+      <div class="btn-row" style="margin-top:10px;"><button class="btn btn-primary" id="pauseAdd">휴지 기간 추가</button></div>
+      <div class="fastday-list" id="pauseList" style="margin-top:10px;"></div>
     </div>
     <div class="card">
       <h2>공휴일 관리</h2>
@@ -526,7 +586,25 @@ window.FIREBASE_CONFIG = {
 const LS_KEY='switchon_v1';
 const DAY=86400000;
 const DEFAULT_HOLIDAYS={'2026-07-17':'제헌절','2026-08-17':'광복절 대체공휴일'};
+const SCHEMA=2;
+/* 구버전 데이터를 현재 스키마로 변환. 읽기 시점에 수행하고 다음 저장 때 반영된다. */
+function migrate(d){
+  d=d||{};
+  const from=d.schema||1;
+  if(from<2){
+    Object.keys(d.days||{}).forEach(ds=>{
+      const r=d.days[ds]; if(!r||!r.checks) return;
+      Object.keys(r.checks).forEach(k=>{
+        if(r.checks[k]===true) r.checks[k]=1;      /* 1 = 체크됨, 시각 미상 */
+        else if(!r.checks[k]) delete r.checks[k];
+      });
+    });
+  }
+  d.schema=SCHEMA;
+  return d;
+}
 function normalize(d){
+  d=migrate(d);
   d.settings=d.settings||{};
   if(d.settings.startDate===undefined) d.settings.startDate=null;
   if(d.settings.skipPhase1===undefined) d.settings.skipPhase1=false;
@@ -534,6 +612,8 @@ function normalize(d){
   if(!d.settings.planTimes) d.settings.planTimes={};
   if(d.settings.lastBackup===undefined) d.settings.lastBackup=null;
   if(!d.settings.holidays) d.settings.holidays={...DEFAULT_HOLIDAYS};
+  if(!Array.isArray(d.settings.pauses)) d.settings.pauses=[];
+  if(d.settings.updatedAt===undefined) d.settings.updatedAt=d.updatedAt||0;
   if(!d.days) d.days={};
   if(d.updatedAt===undefined) d.updatedAt=0;
   return d;
@@ -543,9 +623,16 @@ function load(){
   return normalize({settings:{},days:{}});
 }
 /* save(): ① 변경 시각 도장 ② 로컬 저장(즉시) ③ 클라우드 전송 예약(1.5초 뒤) */
+/* save(ds): 날짜 기록 변경 · saveSettings(): 설정 변경. 둘을 섞으면 병합이 어긋난다. */
 function save(touchDs){
   const ds=(touchDs===undefined)?selDate:touchDs;
   if(ds&&db.days[ds]) db.days[ds]._ts=Date.now();
+  db.updatedAt=Date.now();
+  saveLocal();
+  if(window.__cloud) window.__cloud.queue();
+}
+function saveSettings(){
+  db.settings.updatedAt=Date.now();
   db.updatedAt=Date.now();
   saveLocal();
   if(window.__cloud) window.__cloud.queue();
@@ -554,7 +641,14 @@ function saveLocal(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(db));}
   catch(e){alert('로컬 저장 실패: 브라우저 저장소를 확인하세요.');}
 }
-function dayRec(ds){ if(!db.days[ds]) db.days[ds]={checks:{},water:0}; return db.days[ds]; }
+function dayRec(ds){
+  const r=db.days[ds];
+  if(!r || r._deleted) db.days[ds]={checks:{},water:0};   /* 삭제된 날에 다시 입력하면 되살아난다 */
+  return db.days[ds];
+}
+/* 살아있는 기록만 반환. 삭제 표식이 붙은 날은 없는 것으로 취급한다. */
+function liveDay(ds){ const r=db.days[ds]; return (r && !r._deleted) ? r : null; }
+function liveDates(){ return Object.keys(db.days).filter(ds=>!db.days[ds]._deleted); }
 let db=load();
 
 /* 클라우드 모듈이 사용하는 창구 */
@@ -576,9 +670,10 @@ const todayStr=()=>fmt(new Date());
 /* effDay: 1~3 s1 / 4~7 s2 / 8~14 s3(2주차) / 15~21 s4(3주차) / 22~28 s5(4주차) / 29~ 유지기 */
 function effDay(ds){
   const s=db.settings; if(!s.startDate) return null;
+  if(pauseOf(ds)) return null;                       /* 휴지 중에는 일차가 진행되지 않는다 */
   const diff=Math.round((parse(ds)-parse(s.startDate))/DAY);
   if(diff<0) return null;
-  return diff+1+(s.skipPhase1?3:0);
+  return diff+1+(s.skipPhase1?3:0)-pausedBefore(ds);
 }
 const STAGES={
   s1:{name:'1단계 · 지방 대사 스위치 켜기',range:'1~3일차',desc:'단백질 음료 하루 4회. 허기 시 채소·두부·무가당 요거트 허용.'},
@@ -588,10 +683,15 @@ const STAGES={
   s5:{name:'5단계 · 체지방 감량 극대화',range:'4주차',desc:'점심·저녁 모두 저탄수. 주 3회 24시간 단식(연속 금지).'},
   maint:{name:'유지기',range:'4주 이후',desc:'체중 유지가 목표. 주 2회 24시간 단식(월·금 기본)과 14시간 공복 유지. 체중이 늘면 즉시 재돌입.'}
 };
-function stageOf(ds){
+function stageRaw(ds){
   const e=effDay(ds); if(e===null) return null;
   if(e<=3) return 's1'; if(e<=7) return 's2'; if(e<=14) return 's3';
   if(e<=21) return 's4'; if(e<=28) return 's5'; return 'maint';
+}
+function stageOf(ds){
+  const a=adaptOf(ds);
+  if(a && effDay(ds)!==null) return adaptStage(a);
+  return stageRaw(ds);
 }
 /* 단식 자동 추천: 2주차 목(e11) / 3주차 월·목(e15,e18) / 4주차 월·수·금(e22,e24,e26) / 유지기 주2회(월·금 기본) */
 function autoFast(ds){
@@ -601,11 +701,53 @@ function autoFast(ds){
   return false;
 }
 function isFast(ds){
+  if(pauseOf(ds)) return false;
+  const a=adaptOf(ds);
+  /* 재적응 구간은 단식을 배치하지 않는다. 1주 이상 재적응일 때만 5일차부터 허용 */
+  if(a && !(a.total>=7 && a.day>=5)) return false;
   const ov=db.settings.fastOverride;
   if(ov[ds]===true) return true;
   if(ov[ds]===false) return false;
   return autoFast(ds);
 }
+
+/* ═══════════════ 휴지기(여행·명절 등 장기 이탈) ═══════════════ */
+/* 휴지 기간에는 플랜을 만들지 않고 일차 계산도 멈춘다. 복귀 후에는 기간에 비례해 재적응 구간을 둔다. */
+function pauseList(){ return db.settings.pauses||[]; }
+function pauseOf(ds){ return pauseList().find(p=>ds>=p.from&&ds<=p.to)||null; }
+function dayDiff(a,b){ return Math.round((parse(b)-parse(a))/DAY); }
+function pauseLen(p){ return dayDiff(p.from,p.to)+1; }
+/* 시작일 이후, 해당 날짜 이전까지의 휴지 일수 */
+function pausedBefore(ds){
+  const s=db.settings; if(!s.startDate) return 0;
+  let n=0;
+  pauseList().forEach(p=>{
+    for(let d=p.from; d<=p.to; d=addDays(d,1)){
+      if(d>=s.startDate && d<ds) n++;
+    }
+  });
+  return n;
+}
+/* 재적응 기간: 휴지 3~4일→1일, 5~7일→3일, 8~14일→1주, 15일↑→2주 */
+function adaptTotal(len){ if(len<=2) return 0; if(len<=4) return 1; if(len<=7) return 3; if(len<=14) return 7; return 14; }
+function adaptOf(ds){
+  for(const p of pauseList()){
+    const total=adaptTotal(pauseLen(p)); if(!total) continue;
+    const idx=dayDiff(addDays(p.to,1),ds)+1;
+    if(idx>=1&&idx<=total) return {pause:p,day:idx,total,len:pauseLen(p)};
+  }
+  return null;
+}
+const STAGE_RANK={s1:1,s2:2,s3:3,s4:4,s5:5,maint:6};
+function lowerStage(a,b){ return (STAGE_RANK[a]<=STAGE_RANK[b])?a:b; }
+/* 재적응 중 적용할 단계 — 중단 시점 단계를 넘지 않는다 */
+function adaptStage(a){
+  const resume=stageRaw(addDays(a.pause.from,-1))||'s2';
+  const target=(a.total===14 && a.day<=7)?'s2':'s3';
+  return lowerStage(target,resume);
+}
+/* 복귀 직후 3일은 글리코겐·수분이 다시 차는 구간이라 체중을 기준선으로 쓰지 않는다 */
+function inWaterRecovery(ds){ const a=adaptOf(ds); return !!(a && a.len>=3 && a.day<=3); }
 
 /* ═══════════════ 공휴일/주말 ═══════════════ */
 function isHoliday(ds){ return !!(db.settings.holidays&&db.settings.holidays[ds]); }
@@ -640,7 +782,7 @@ const TIME_LABELS={
   suppPM:'저녁 영양제', fastStart:'공복(14시간) 시작', stretch:'오십견 스트레칭', record:'저녁 기록', sleep:'취침'
 };
 function getTime(id){ return (db.settings.planTimes&&db.settings.planTimes[id])||DEFAULT_TIMES[id]; }
-function setTime(id,v){ if(!db.settings.planTimes) db.settings.planTimes={}; db.settings.planTimes[id]=v; save(); renderAll(); }
+function setTime(id,v){ if(!db.settings.planTimes) db.settings.planTimes={}; db.settings.planTimes[id]=v; saveSettings(); renderAll(); }
 function toMin(t){ const[h,m]=t.split(':').map(Number); return h*60+m; }
 function toHM(min){ min=((min%1440)+1440)%1440; const h=Math.floor(min/60),m=min%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
 /* 공복(단식) 시작 시각부터 다음날 첫 끼(아침 단백질 음료)까지의 실제 시간을 계산 — 문구가 실제 설정과 항상 일치하도록 */
@@ -655,8 +797,23 @@ function fastWindowInfo(ds){
   return {endT, hrs:diff/60, nextFast};
 }
 
+/* ═══════════════ 달성률 ═══════════════ */
+/* 그날 실제로 제시된 플랜 항목을 기록에 남긴다. 나중에 설정을 바꿔도 지난 달성률이 흔들리지 않는다. */
+function snapshotPlan(ds,plan){
+  const r=dayRec(ds);
+  if(!r.planIds||!r.planIds.length) r.planIds=plan.map(p=>p.id);
+}
+function achievement(ds,planFallback){
+  const r=liveDay(ds); if(!r) return null;
+  const ids=(r.planIds&&r.planIds.length)?r.planIds:(planFallback||buildPlan(ds)).map(p=>p.id);
+  if(!ids.length) return null;
+  const done=ids.filter(id=>r.checks&&r.checks[id]).length;
+  return {done, total:ids.length, pct:Math.round(done/ids.length*100)};
+}
+
 /* ═══════════════ 플랜 생성 ═══════════════ */
 function buildPlan(ds){
+  if(pauseOf(ds)) return [];                      /* 휴지 기간에는 플랜을 만들지 않는다 */
   const st=stageOf(ds); if(!st) return [];
   const fast=isFast(ds)&&st!=='s1'&&st!=='s2';
   const items=[];
@@ -666,6 +823,10 @@ function buildPlan(ds){
 
   add('wake',getTime('wake'),'기상 · 공복 체중 측정','일어나자마자 화장실 다녀온 뒤 측정, 아래 기록란에 입력');
   add('probio',getTime('probio'),'아침 공복 유산균','물 한 컵과 함께');
+  const ad=adaptOf(ds);
+  if(ad) items.push({id:'adapt',time:'재적응',
+    label:'재적응 '+ad.day+'/'+ad.total+'일차 — '+STAGES[stageOf(ds)].name.split(' · ')[0]+' 수준으로 진행',
+    sub:(ad.day<=2?'운동은 걷기만. ':'')+'체중이 늘어 보이는 것은 대부분 글리코겐과 함께 찬 수분입니다',recovery:true});
   if(recovery) items.push({id:'recovery',time:'복귀',label:'복귀일 미션: 14시간 공복 철저 + 걷기 20~30분 추가',sub:'어제 이탈은 끝났습니다. 오늘 정상 플랜으로만 복귀하면 됩니다',recovery:true});
 
   if(fast){
@@ -777,8 +938,41 @@ function renderSOS(el){
   +`<p class="muted" style="margin:10px 0 0;">예방: 물 2L를 시간대별로 나눠 마시기 · 1~3일차 무리하지 않기(생략 옵션은 설정 탭) · 증상 발생 시 메모란에 시각과 상황 기록</p>`;
 }
 
+/* ═══════════════ 체크 시각 ═══════════════ */
+/* checks[id] = 실제 수행 시각(epoch ms). 1 = 체크했으나 시각 미상 */
+function tsOfPlanned(ds,timeStr){
+  if(!/^\d{2}:\d{2}$/.test(timeStr||'')) return 1;
+  const d=parse(ds); const [h,m]=timeStr.split(':').map(Number);
+  d.setHours(h,m,0,0); return d.getTime();
+}
+function checkTimeText(ts){
+  if(!ts||ts===1) return '';
+  const d=new Date(ts);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function planDelta(ds,planned,ts){
+  if(!ts||ts===1||!/^\d{2}:\d{2}$/.test(planned||'')) return '';
+  const diff=Math.round((ts-tsOfPlanned(ds,planned))/60000);
+  if(Math.abs(diff)<10) return '';
+  return (diff>0?'+':'')+diff+'분';
+}
+/* 실제 공복 시간 — 전날 마지막 식사 체크와 당일 첫 식사 체크의 간격 */
+const MEAL_LAST=['fastEnd','dinner','shake4'], MEAL_FIRST=['shakeAM','shake1','fastEnd'];
+function mealTs(ds,ids,pick){
+  const r=liveDay(ds); if(!r||!r.checks) return null;
+  const vals=ids.map(id=>r.checks[id]).filter(v=>v&&v>1);
+  if(!vals.length) return null;
+  return pick==='max'?Math.max(...vals):Math.min(...vals);
+}
+function realFastHours(ds){
+  const end=mealTs(ds,MEAL_FIRST,'min'), start=mealTs(addDays(ds,-1),MEAL_LAST,'max');
+  if(!end||!start||end<=start) return null;
+  return (end-start)/3600000;
+}
+
 /* ═══════════════ 상태 ═══════════════ */
 let selDate=todayStr();
+let timeEditMode=false;
 let calMonth=(()=>{const d=new Date(); return {y:d.getFullYear(),m:d.getMonth()};})();
 
 /* ═══════════════ 렌더: 오늘 탭 ═══════════════ */
@@ -798,7 +992,7 @@ function renderTodayHeader(){
 
   /* 백업 배너 */
   const bb=document.getElementById('backup-banner');
-  const hasData=Object.keys(db.days).length>2;
+  const hasData=liveDates().length>2;
   const overdue=!s.lastBackup||((Date.now()-s.lastBackup)>7*DAY);
   const cloudOn=!!(window.__cloud&&window.__cloud.active());
   bb.innerHTML=(hasData&&overdue&&!cloudOn)?`<div class="banner"><span>마지막 백업 후 7일이 지났습니다. 데이터를 지금 백업하세요.</span><button onclick="switchTab('set')">백업하기</button></div>`:'';
@@ -806,9 +1000,10 @@ function renderTodayHeader(){
   /* 전날 밤 기록 넛지 */
   const nudge=document.getElementById('prevNightNudge');
   const yestDs=addDays(selDate,-1);
-  const yest=db.days[yestDs];
-  const todayRec=db.days[selDate];
-  const missingPrev=effDay(yestDs)!==null && (!yest||(!yest.sleepBed&&yest.nocturia===undefined));
+  const yest=liveDay(yestDs);
+  const todayRec=liveDay(selDate);
+  const yestLive=liveDay(yestDs);
+  const missingPrev=effDay(yestDs)!==null && !pauseOf(yestDs) && (!yestLive||(!yestLive.sleepBed&&yestLive.nocturia===undefined));
   if(nudge){
     nudge.innerHTML=(missingPrev&&!(todayRec&&todayRec.sleepBed))?`<div class="banner" style="margin-bottom:12px;"><span>어제(${korDate(yestDs)}) 밤 기록(취침시각·야간뇨)이 비어있어요.</span><button onclick="selDate='${yestDs}'; renderToday();">어제로 이동</button></div>`:'';
   }
@@ -819,10 +1014,10 @@ function renderTodayHeader(){
   if(st){
     const fast=isFast(selDate)&&st!=='s1'&&st!=='s2';
     const info=STAGES[st];
-    const rec=db.days[selDate]||{};
+    const rec=liveDay(selDate)||{};
     const plan=buildPlan(selDate);
-    const doneN=plan.filter(p=>rec.checks&&rec.checks[p.id]).length;
-    const pct=plan.length?Math.round(doneN/plan.length*100):0;
+    const ach=achievement(selDate,plan);
+    const pct=ach?ach.pct:0;
     const R=20,C=2*Math.PI*R;
     const off=isOffDay(selDate);
     sb.innerHTML=`<div class="switchbar ${fast?'fasting':(st==='maint'?'maint':'')}">
@@ -845,21 +1040,55 @@ function renderTodayHeader(){
   /* 플랜 리스트 */
   const list=document.getElementById('planList');
   const plan=buildPlan(selDate);
+  const fh=realFastHours(selDate);
+  const fhEl=document.getElementById('realFast');
+  if(fhEl) fhEl.innerHTML=(fh!==null)
+    ? '간밤 실제 공복 <b>'+fh.toFixed(1)+'시간</b> <span class="muted">(체크한 시각 기준)</span>'
+    : '';
   const rec=dayRec(selDate);
+  const teb=document.getElementById('timeEditBtn');
+  if(teb) teb.textContent=timeEditMode?'시간 입력 완료':'시간 한번에 입력';
   document.getElementById('planTag').textContent=st?STAGES[st].range+(isFast(selDate)&&st!=='s1'&&st!=='s2'?' · 단식일':''):'';
-  if(!plan.length){ list.innerHTML='<p class="muted">시작일 이후 날짜에 플랜이 표시됩니다.</p>'; }
+  const pz=pauseOf(selDate);
+  if(pz){
+    list.innerHTML='<div class="pausebox"><b>휴지 기간 ('+(pz.reason||'이탈')+')</b>'
+      +'<span>'+korDate(pz.from)+' ~ '+korDate(pz.to)+' · 총 '+pauseLen(pz)+'일</span>'
+      +'<span>이 기간은 플랜과 통계에서 제외됩니다. 복귀 후 '+(adaptTotal(pauseLen(pz))||0)+'일간 재적응 구간이 자동으로 적용됩니다.</span></div>';
+  }
+  else if(!plan.length){ list.innerHTML='<p class="muted">시작일 이후 날짜에 플랜이 표시됩니다.</p>'; }
   else{
     list.innerHTML=plan.map(p=>{
-      const done=rec.checks&&rec.checks[p.id];
+      const ts=rec.checks&&rec.checks[p.id];
+      const done=!!ts;
+      const actual=checkTimeText(ts), delta=planDelta(selDate,p.time,ts);
+      const timeCell=(done&&timeEditMode)
+        ? `<input type="time" class="tedit" data-id="${p.id}" value="${actual||p.time}">`
+        : `<div class="time">${p.time}${done?`<span class="act">${actual?actual:'시각 미상'}${delta?' <i>'+delta+'</i>':''}</span>`:''}</div>`;
       return `<div class="plan-item ${done?'done':''} ${p.recovery?'recovery':''}" data-id="${p.id}">
-        <div class="time">${p.time}</div>
+        ${timeCell}
         <div class="body"><b>${p.label}</b>${p.sub?`<span>${p.sub}</span>`:''}</div>
         <button class="chk">${done?'✓':''}</button></div>`;
     }).join('');
     list.querySelectorAll('.plan-item').forEach(el=>{
       el.querySelector('.chk').onclick=()=>{
-        const id=el.dataset.id; const r=dayRec(selDate);
-        r.checks[id]=!r.checks[id]; save(); renderTodayHeader();
+        const id=el.dataset.id, r=dayRec(selDate);
+        if(r.checks[id]) delete r.checks[id];
+        else{
+          /* 오늘이면 지금 시각, 지난 날짜면 예정 시각을 기본값으로 둔다 */
+          const p=plan.find(x=>x.id===id);
+          r.checks[id]=(selDate===todayStr())?Date.now():tsOfPlanned(selDate,p?p.time:'');
+          snapshotPlan(selDate,plan);
+        }
+        save(selDate); renderTodayHeader();
+      };
+      const tc=el.querySelector('.time .act');
+      if(tc) tc.onclick=e=>{ e.stopPropagation(); timeEditMode=true; renderTodayHeader(); };
+    });
+    list.querySelectorAll('.tedit').forEach(inp=>{
+      inp.onchange=()=>{
+        const r=dayRec(selDate);
+        r.checks[inp.dataset.id]=tsOfPlanned(selDate,inp.value);
+        save(selDate);
       };
     });
   }
@@ -881,13 +1110,20 @@ function renderTodayForm(){
   document.querySelectorAll('#dinnerSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.v===rec.dinner));
   if(typeof applyMealLock==='function'){ applyMealLock('lunch'); applyMealLock('dinner'); }
   renderWeightHint('wAM','weightAM'); renderWeightHint('wPM','weightPM');
+  /* 휴지 기간에는 측정 조건이 달라 체중 기록을 받지 않는다 */
+  const paused=!!pauseOf(selDate);
+  ['wAM','wPM'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.disabled=paused;
+    if(paused) el.placeholder='휴지 기간 — 기록하지 않습니다';
+  });
   const dv=document.getElementById('devState');
   dv.innerHTML=rec.deviation?`⚠️ 이탈 기록됨: <b>${rec.deviation==='meal'?'한 끼':'하루'}</b> — 다음날 플랜에 복귀 미션이 표시됩니다.`:'';
 }
 function setVal(id,v){ document.getElementById(id).value=(v===undefined||v===null)?'':v; }
 /* 선택한 날짜 이전의 가장 최근 기록값 */
 function lastWeight(key,beforeDs){
-  const ks=Object.keys(db.days).filter(k=>k<beforeDs&&db.days[k]&&db.days[k][key]).sort();
+  const ks=liveDates().filter(k=>k<beforeDs&&db.days[k][key]).sort();
   if(!ks.length) return null;
   const k=ks[ks.length-1];
   return {ds:k, v:db.days[k][key]};
@@ -942,19 +1178,20 @@ function renderCal(){
   for(let d=1;d<=dayN;d++){
     const ds=fmt(new Date(y,m,d));
     const e=effDay(ds); const st=stageOf(ds);
-    const rec=db.days[ds];
+    const rec=liveDay(ds);
     let dot='';
     if(rec){
       if(rec.deviation) dot='<div class="dot r"></div>';
       else{
         const plan=buildPlan(ds); 
-        const dn=plan.filter(p=>rec.checks&&rec.checks[p.id]).length;
-        if(plan.length&&dn>0) dot=`<div class="dot ${dn/plan.length>=0.7?'g':'y'}"></div>`;
+        const ach=achievement(ds,plan);
+        if(ach&&ach.done>0) dot=`<div class="dot ${ach.pct>=70?'g':'y'}"></div>`;
       }
     }
     const fast=st&&st!=='s1'&&st!=='s2'&&isFast(ds);
     const hol=isHoliday(ds);
-    html+=`<button class="day ${e!==null&&e<=28?'inprog':''} ${fast?'fast':''} ${ds===todayStr()?'today':''}" data-ds="${ds}" title="${hol?holidayName(ds):''}">${d}${hol?'★':''}${dot}</button>`;
+    const pz=pauseOf(ds);
+    html+=`<button class="day ${e!==null&&e<=28?'inprog':''} ${fast?'fast':''} ${pz?'paused':''} ${ds===todayStr()?'today':''}" data-ds="${ds}" title="${pz?('휴지: '+(pz.reason||'')):(hol?holidayName(ds):'')}">${d}${hol?'★':''}${pz?'·':''}${dot}</button>`;
   }
   const grid=document.getElementById('calGrid');
   grid.innerHTML=html;
@@ -975,6 +1212,12 @@ function lineChart(container,series,opts){
   const X=i=>P.l+(W-P.l-P.r)*(days.length<=1?0.5:i/(days.length-1));
   const Y=v=>P.t+(H-P.t-P.b)*(1-(v-min)/(max-min));
   let svg=`<svg class="chart-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  /* 휴지·수분 회복 구간을 옅게 칠해 해석 시 참고하게 한다 */
+  if(opts.shade){
+    const bw=(W-P.l-P.r)/Math.max(1,days.length);
+    opts.shade.forEach((flag,i)=>{ if(flag)
+      svg+=`<rect x="${(X(i)-bw/2).toFixed(1)}" y="${P.t}" width="${bw.toFixed(1)}" height="${H-P.t-P.b}" fill="#E7ECE9"/>`; });
+  }
   for(let g=0;g<=3;g++){
     const v=min+(max-min)*g/3, yy=Y(v);
     svg+=`<line x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}" stroke="#E3EBE5" stroke-width="1"/>
@@ -986,8 +1229,8 @@ function lineChart(container,series,opts){
     const pts=s.data.map((p,i)=>p.y!==undefined&&p.y!==null?[X(i),Y(p.y)]:null);
     let path='',pen=false;
     pts.forEach(pt=>{ if(pt){ path+=(pen?'L':'M')+pt[0].toFixed(1)+' '+pt[1].toFixed(1); pen=true;} else pen=false; });
-    if(path) svg+=`<path d="${path}" fill="none" stroke="${s.color}" stroke-width="${s.width||2.5}" ${s.dash?'stroke-dasharray="5 4"':''} stroke-linecap="round"/>`;
-    pts.forEach(pt=>{ if(pt) svg+=`<circle cx="${pt[0]}" cy="${pt[1]}" r="3" fill="${s.color}"/>`; });
+    if(path&&!s.dotsOnly) svg+=`<path d="${path}" fill="none" stroke="${s.color}" stroke-width="${s.width||2.5}" ${s.dash?'stroke-dasharray="5 4"':''} stroke-linecap="round"/>`;
+    pts.forEach(pt=>{ if(pt) svg+=`<circle cx="${pt[0]}" cy="${pt[1]}" r="${s.dotsOnly?2.2:3}" fill="${s.color}" opacity="${s.dotsOnly?0.55:1}"/>`; });
   });
   svg+='</svg>';
   el.innerHTML=svg;
@@ -1000,90 +1243,194 @@ function mondayOf(ds){ const d=parse(ds); const dow=(d.getDay()+6)%7; d.setDate(
    (시작일 이전에 기록된 데이터가 있어도 잘리지 않도록) */
 function historyStart(){
   const s=db.settings;
-  const firstRecorded=Object.keys(db.days).sort()[0];
+  const firstRecorded=liveDates().sort()[0];
   if(s.startDate&&firstRecorded) return (s.startDate<firstRecorded)?s.startDate:firstRecorded;
   return s.startDate||firstRecorded||todayStr();
 }
 /* 체중/통증 그래프 공통 선 스타일: 두 그래프가 같은 굵기·톤으로 보이도록 통일 */
 const CHART_LINE={weightAM:{color:'#0E7C66',width:2.6},weightPM:{color:'#8FBFB2',width:2,dash:true},
   painKnee:{color:'#BE4438',width:2.6},painShoulder:{color:'#7FA9C9',width:2,dash:true}};
-let weightView='daily';
-function renderWeightChart(){
-  const get=(ds,k)=>{const r=db.days[ds]; const v=r&&r[k]; return (v===''||v===undefined||v===null)?null:Number(v);};
-  if(weightView==='weekly'){
-    const withData=Object.keys(db.days).filter(ds=>db.days[ds].weightAM||db.days[ds].weightPM).sort();
-    if(!withData.length){ document.getElementById('weightChart').innerHTML='<p class="muted">기록이 쌓이면 그래프가 표시됩니다.</p>'; document.getElementById('weightChart').style.width=''; return; }
-    const start=historyStart();
-    const minWk=mondayOf(start<withData[0]?start:withData[0]), maxWk=mondayOf(todayStr());
-    const weeks=[]; for(let wk=minWk; wk<=maxWk; wk=addDays(wk,7)) weeks.push(wk);
-    const bucketAvg=key=>{
-      const buckets={};
-      Object.keys(db.days).forEach(ds=>{
-        const v=get(ds,key); if(v===null) return;
-        const wk=mondayOf(ds); (buckets[wk]=buckets[wk]||[]).push(v);
-      });
-      return weeks.map(wk=>buckets[wk]?buckets[wk].reduce((a,b)=>a+b,0)/buckets[wk].length:null);
-    };
-    const amArr=bucketAvg('weightAM'), pmArr=bucketAvg('weightPM');
-    const width=Math.max(680,weeks.length*46);
-    lineChart('weightChart',[
-      {data:weeks.map((wk,i)=>({x:wk,y:amArr[i]})),...CHART_LINE.weightAM},
-      {data:weeks.map((wk,i)=>({x:wk,y:pmArr[i]})),...CHART_LINE.weightPM}
-    ],{days:weeks,dec:1,width,labelEvery:Math.min(weeks.length,10)});
-  }else{
-    const start=historyStart();
-    const days=[]; for(let d=start; d<=todayStr(); d=addDays(d,1)) days.push(d);
-    const width=Math.max(680,days.length*22);
-    lineChart('weightChart',[
-      {data:days.map(ds=>({x:ds,y:get(ds,'weightAM')})),...CHART_LINE.weightAM},
-      {data:days.map(ds=>({x:ds,y:get(ds,'weightPM')})),...CHART_LINE.weightPM}
-    ],{days,dec:1,width,labelEvery:Math.min(days.length,20)});
+/* 기간 창: range=표시 일수(0=전체), offset=오늘로부터 뒤로 밀린 일수 */
+let chartRange=30, chartOffset=0;
+function chartDays(){
+  const first=historyStart(), last=todayStr();
+  if(!chartRange){
+    const out=[]; for(let d=first; d<=last; d=addDays(d,1)) out.push(d);
+    return out;
   }
+  let end=addDays(last,-chartOffset);
+  if(end<first) end=first;
+  let begin=addDays(end,-(chartRange-1));
+  if(begin<first) begin=first;
+  const out=[]; for(let d=begin; d<=end; d=addDays(d,1)) out.push(d);
+  return out;
+}
+function movingAvg(vals,win){
+  return vals.map((_,i)=>{
+    let s=0,n=0;
+    for(let j=Math.max(0,i-win+1); j<=i; j++){ const v=vals[j]; if(v!==null&&v!==undefined){ s+=v; n++; } }
+    return n>=2 ? s/n : null;
+  });
+}
+function shadeFlags(days){ return days.map(ds=>!!(pauseOf(ds)||inWaterRecovery(ds))); }
+function renderRangeLabel(days){
+  const el=document.getElementById('rangeLabel'); if(!el) return;
+  el.textContent=days.length?(days[0].slice(5).replace('-','/')+' ~ '+days[days.length-1].slice(5).replace('-','/')+' ('+days.length+'일)'):'';
+  const nx=document.getElementById('rNext'); if(nx) nx.disabled=(chartOffset===0||!chartRange);
+  const pv=document.getElementById('rPrev'); if(pv) pv.disabled=!chartRange;
+}
+function renderWeightChart(){
+  const get=(ds,k)=>{const r=liveDay(ds); const v=r&&r[k]; return (v===''||v===undefined||v===null)?null:Number(v);};
+  const days=chartDays();
+  renderRangeLabel(days);
+  const am=days.map(ds=>get(ds,'weightAM'));
+  const pm=days.map(ds=>get(ds,'weightPM'));
+  const ma=movingAvg(am,7);
+  lineChart('weightChart',[
+    {data:days.map((ds,i)=>({x:ds,y:ma[i]})),color:'#0E7C66',width:2.8},
+    {data:days.map((ds,i)=>({x:ds,y:am[i]})),color:'#0E7C66',dotsOnly:true},
+    {data:days.map((ds,i)=>({x:ds,y:pm[i]})),color:'#8FBFB2',dotsOnly:true}
+  ],{days,dec:1,labelEvery:Math.min(days.length,10),shade:shadeFlags(days)});
 }
 function renderPainChart(){
-  const start=historyStart();
-  const days=[]; for(let d=start; d<=todayStr(); d=addDays(d,1)) days.push(d);
-  const get=(ds,k)=>{const r=db.days[ds]; const v=r&&r[k]; return (v===''||v===undefined||v===null)?null:Number(v);};
-  const width=Math.max(680,days.length*22);
+  const get=(ds,k)=>{const r=liveDay(ds); const v=r&&r[k]; return (v===''||v===undefined||v===null)?null:Number(v);};
+  const days=chartDays();
   lineChart('painChart',[
     {data:days.map(ds=>({x:ds,y:get(ds,'painKnee')})),...CHART_LINE.painKnee},
     {data:days.map(ds=>({x:ds,y:get(ds,'painShoulder')})),...CHART_LINE.painShoulder}
-  ],{days,dec:0,fixed:[0,10],width,labelEvery:Math.min(days.length,20)});
+  ],{days,dec:0,fixed:[0,10],labelEvery:Math.min(days.length,10),shade:shadeFlags(days)});
 }
+
+/* ═══════════════ 체성분 ═══════════════ */
+function bodyEntries(){
+  return liveDates().filter(ds=>db.days[ds].body&&db.days[ds].body.weight)
+    .sort().map(ds=>Object.assign({ds},db.days[ds].body));
+}
+function bodyDerived(b){
+  const w=Number(b.weight), f=Number(b.fatPct)||0;
+  const fat=w*f/100;
+  return {weight:w, fat, lean:w-fat, muscle:Number(b.muscleKg)||null,
+          bone:Number(b.boneKg)||null, water:(Number(b.waterPct)||0)*w/100, waterPct:Number(b.waterPct)||null};
+}
+function renderBody(){
+  const dateEl=document.getElementById('bodyDate'); if(!dateEl) return;
+  if(!dateEl.value) dateEl.value=mondayOf(todayStr());
+  const cur=(liveDay(dateEl.value)||{}).body||{};
+  [['bWeight','weight'],['bFat','fatPct'],['bMuscle','muscleKg'],['bBone','boneKg'],['bWater','waterPct']]
+    .forEach(([id,k])=>{ const el=document.getElementById(id); if(el) el.value=(cur[k]===undefined?'':cur[k]); });
+
+  const list=bodyEntries().map(b=>Object.assign({ds:b.ds},bodyDerived(b)));
+  const tbl=document.getElementById('bodyTable'), sum=document.getElementById('bodySummary');
+  if(!list.length){
+    tbl.innerHTML='<tr><td class="muted">측정값을 입력하면 추세가 표시됩니다.</td></tr>';
+    sum.innerHTML=''; document.getElementById('bodyChart').innerHTML='';
+    return;
+  }
+  const first=list[0], last=list[list.length-1];
+  let html='';
+  if(list.length>=2){
+    const dW=last.weight-first.weight, dF=last.fat-first.fat, dL=last.lean-first.lean;
+    const fmt=v=>(v>0?'+':'')+v.toFixed(1);
+    let verdict='', cls='';
+    if(dW<-0.3){
+      const ratio=Math.max(0,Math.min(100,(-dF)/(-dW)*100));
+      if(ratio>=75){ verdict='근육을 지키며 감량 중입니다.'; cls='good'; }
+      else if(ratio>=50){ verdict='단백질 섭취량과 근력 자극을 점검해 보세요.'; cls='warn'; }
+      else { verdict='근손실 우려가 있습니다. 단식 빈도를 재검토하세요.'; cls='bad'; }
+      html+='<div class="bodysum '+cls+'"><b>'+list.length+'회 측정 · '+fmt(dW)+'kg 중 지방 '+fmt(dF)+'kg ('+ratio.toFixed(0)+'%), 제지방 '+fmt(dL)+'kg</b><span>'+verdict+'</span></div>';
+    } else {
+      html+='<div class="bodysum"><b>'+list.length+'회 측정 · 체중 '+fmt(dW)+'kg, 지방 '+fmt(dF)+'kg, 제지방 '+fmt(dL)+'kg</b><span>체중 감소가 아직 뚜렷하지 않아 지방 기여율은 계산하지 않습니다.</span></div>';
+    }
+    /* 골격근량은 프로그램의 주차 진행 판정 기준이다 */
+    if(first.muscle&&last.muscle){
+      const dM=last.muscle-first.muscle;
+      const e=effDay(last.ds), wk=e?Math.ceil(e/7):null;
+      /* 체중계 측정 오차가 ±0.3kg 수준이라 그 안쪽은 유지로 본다 */
+      html+='<div class="bodysum '+(dM>=-0.3?'good':'warn')+'"><b>골격근량 '+last.muscle.toFixed(1)+'kg (시작 '+first.muscle.toFixed(1)+'kg, '+fmt(dM)+'kg)</b><span>'
+        +(dM>=-0.3?'측정 오차 범위 안에서 시작 시점 수준을 유지하고 있습니다. 프로그램 기준으로 다음 주차 진행 가능합니다.'
+                 :'시작 시점보다 줄었습니다. 프로그램 기준으로는 현재 주차를 반복하는 편이 좋습니다.')
+        +(wk?' (현재 '+wk+'주차)':'')+'</span></div>';
+    }
+    /* 뼈질량은 몇 주 사이 거의 변하지 않는다 → 크게 흔들리면 측정 조건 문제 */
+    const bones=list.map(b=>b.bone).filter(v=>v);
+    if(bones.length>=2 && (Math.max(...bones)-Math.min(...bones))>0.2){
+      html+='<div class="bodysum warn"><b>측정 조건 확인 필요</b><span>뼈질량이 '+(Math.max(...bones)-Math.min(...bones)).toFixed(2)+'kg 범위로 흔들립니다. 측정 시각이나 수분 상태가 달랐을 수 있어 해석에 주의하세요.</span></div>';
+    }
+  }
+  sum.innerHTML=html;
+
+  const ds2=list.map(b=>b.ds);
+  lineChart('bodyChart',[
+    {data:list.map(b=>({x:b.ds,y:b.weight})),color:'#1C2A24',width:2.6},
+    {data:list.map(b=>({x:b.ds,y:b.fat})),color:'#BE4438',width:2.4},
+    {data:list.map(b=>({x:b.ds,y:b.lean})),color:'#0E7C66',width:2.4}
+  ],{days:ds2,dec:1,labelEvery:Math.min(ds2.length,8)});
+
+  let rows='<tr><th>측정일</th><th>주차</th><th>체중</th><th>체지방률</th><th>체지방량</th><th>제지방량</th><th>골격근</th><th>체수분률</th></tr>';
+  list.slice().reverse().forEach(b=>{
+    const e=effDay(b.ds), wk=e?Math.ceil(e/7)+'주':'-';
+    rows+='<tr><td>'+b.ds.slice(5).replace('-','/')+'</td><td>'+wk+'</td><td>'+b.weight.toFixed(1)+'</td><td>'
+      +((b.weight?((b.fat/b.weight*100).toFixed(1)+'%'):'-'))+'</td><td>'+b.fat.toFixed(1)+'</td><td>'+b.lean.toFixed(1)
+      +'</td><td>'+(b.muscle?b.muscle.toFixed(1):'-')+'</td><td>'+(b.waterPct?b.waterPct.toFixed(1)+'%':'-')+'</td></tr>';
+  });
+  tbl.innerHTML=rows;
+  const cl=document.getElementById('bodyChart'); if(cl) cl.style.width='';
+}
+
 function renderCharts(){
   renderWeightChart();
   renderPainChart();
+  renderBody();
+  renderWeekStats();
+}
 
-  /* 주간 통계 — 4주 프로그램 종료 후 유지기에도 계속 누적 */
-  const s=db.settings; const tbl=document.getElementById('weekStats');
+/* 주간 통계: 주 평균끼리 비교한다.
+   주 안의 첫/마지막 기록만 비교하면 주 경계의 변화가 통째로 누락된다. */
+function renderWeekStats(){
+  const s=db.settings, tbl=document.getElementById('weekStats');
   if(!s.startDate){ tbl.innerHTML='<tr><td class="muted">시작일 설정 후 표시됩니다.</td></tr>'; return; }
-  let rows='<tr><th>주차</th><th>달성률</th><th>체중 변화</th><th>야간뇨 평균</th><th>평균 무릎통증</th><th>이탈</th></tr>';
-  const skipOff=s.skipPhase1?3:0;
-  const eToday=effDay(todayStr());
-  if(eToday===null){ tbl.innerHTML=rows; return; }
-  for(let w=1; (w-1)*7+1<=eToday; w++){
-    const eStart=(w-1)*7+1, eEnd=w*7;
-    let done=0,tot=0,noc=[],knee=[],dev=0,wFirst=null,wLast=null;
-    for(let e=eStart;e<=eEnd;e++){
-      const ds=addDays(s.startDate,e-1-skipOff);
-      if(parse(ds)>new Date()) continue;
-      if(effDay(ds)===null) continue;
-      const plan=buildPlan(ds), r=db.days[ds];
-      tot+=plan.length;
-      if(r){
-        done+=plan.filter(p=>r.checks&&r.checks[p.id]).length;
-        if(r.nocturia!==undefined&&r.nocturia!=='') noc.push(Number(r.nocturia));
-        if(r.painKnee!==undefined) knee.push(Number(r.painKnee));
-        if(r.deviation) dev++;
-        if(r.weightAM){ if(wFirst===null) wFirst=Number(r.weightAM); wLast=Number(r.weightAM); }
-      }
+  const weeks={};
+  for(let ds=s.startDate; ds<=todayStr(); ds=addDays(ds,1)){
+    const e=effDay(ds); if(e===null) continue;          /* 휴지 기간은 제외된다 */
+    const w=Math.ceil(e/7);
+    const b=weeks[w]||(weeks[w]={w, wts:[], noc:[], knee:[], dev:0, done:0, tot:0, recorded:0});
+    const plan=buildPlan(ds), r=liveDay(ds);
+    const ach=achievement(ds,plan);
+    if(ach){ b.done+=ach.done; b.tot+=ach.total; }
+    else b.tot+=plan.length;
+    if(r){
+      let has=false;
+      /* 복귀 직후 수분 회복 구간의 체중은 기준선에서 뺀다 */
+      if(r.weightAM&&!inWaterRecovery(ds)){ b.wts.push(Number(r.weightAM)); has=true; }
+      if(r.nocturia!==undefined&&r.nocturia!==''){ b.noc.push(Number(r.nocturia)); has=true; }
+      if(r.painKnee!==undefined){ b.knee.push(Number(r.painKnee)); has=true; }
+      if(r.deviation){ b.dev++; has=true; }
+      if(r.checks&&Object.keys(r.checks).length) has=true;
+      if(has) b.recorded++;
     }
-    if(tot===0) continue;
-    const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1):'-';
-    const wd=(wFirst!==null&&wLast!==null&&wFirst!==wLast)?((wLast-wFirst)>0?'+':'')+(wLast-wFirst).toFixed(1)+'kg':'-';
-    const label=w<=4?w+'주차':(w+'주차 (유지기)');
-    rows+=`<tr><td>${label}</td><td>${Math.round(done/tot*100)}%</td><td>${wd}</td><td>${avg(noc)}회</td><td>${avg(knee)}</td><td>${dev?dev+'일':'-'}</td></tr>`;
   }
+  const list=Object.values(weeks).sort((a,b)=>a.w-b.w);
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  let base=null, prev=null;
+  let rows='<tr><th>주차</th><th>평균 체중</th><th>전주 대비</th><th>시작 대비</th><th>달성률</th><th>기록일</th><th>야간뇨</th><th>무릎</th><th>이탈</th></tr>';
+  list.forEach(b=>{
+    if(!b.tot&&!b.recorded) return;
+    const m=avg(b.wts);
+    if(m!==null&&base===null) base=m;
+    const fmt=v=>(v===null?'-':((v>0?'+':'')+v.toFixed(1)));
+    const dPrev=(m!==null&&prev!==null)?m-prev:null;
+    const dBase=(m!==null&&base!==null&&m!==base)?m-base:null;
+    const label=b.w<=4?b.w+'주차':(b.w+'주차 (유지기)');
+    rows+='<tr><td>'+label+'</td>'
+      +'<td>'+(m!==null?m.toFixed(1)+'kg':'-')+'</td>'
+      +'<td>'+fmt(dPrev)+'</td><td>'+fmt(dBase)+'</td>'
+      +'<td>'+(b.tot?Math.round(b.done/b.tot*100)+'%':'-')+'</td>'
+      +'<td>'+b.recorded+'일'+(b.wts.length?' (체중 '+b.wts.length+')':'')+'</td>'
+      +'<td>'+(b.noc.length?avg(b.noc).toFixed(1)+'회':'-')+'</td>'
+      +'<td>'+(b.knee.length?avg(b.knee).toFixed(1):'-')+'</td>'
+      +'<td>'+(b.dev?b.dev+'일':'-')+'</td></tr>';
+    if(m!==null) prev=m;
+  });
   tbl.innerHTML=rows;
 }
 
@@ -1106,7 +1453,7 @@ function renderSet(){
   }
 
   const fl=document.getElementById('fastList');
-  if(!s.startDate){ fl.innerHTML='<p class="muted">시작일을 먼저 설정하세요.</p>'; renderBackupMsg(); renderHolidays(); return; }
+  if(!s.startDate){ fl.innerHTML='<p class="muted">시작일을 먼저 설정하세요.</p>'; renderBackupMsg(); renderHolidays(); renderPauses(); return; }
   /* 프로그램 기간 + 유지기 단식일을 주차별로 묶어서 표시. 오늘 기준 4주 앞까지는 항상 보이도록 범위를 늘려감 */
   const skipOff=s.skipPhase1?3:0;
   const WEEK_TARGET={2:'주 1회',3:'주 2회',4:'주 3회'};
@@ -1136,7 +1483,24 @@ function renderSet(){
   });
   fl.innerHTML=html+`<button class="mini-btn" style="align-self:flex-start; margin-top:4px;" onclick="addFastPrompt()">＋ 단식일 직접 추가</button>`;
   renderBackupMsg();
-  renderHolidays();
+  renderHolidays(); renderPauses();
+}
+function renderPauses(){
+  const el=document.getElementById('pauseList'); if(!el) return;
+  const ps=pauseList().slice().sort((a,b)=>a.from<b.from?-1:1);
+  el.innerHTML=ps.length?ps.map((p,i)=>{
+    const t=adaptTotal(pauseLen(p));
+    return '<div class="fastday-item"><span>'+korDate(p.from)+' ~ '+korDate(p.to)
+      +' <span class="muted">· '+(p.reason||'이탈')+' '+pauseLen(p)+'일'+(t?' · 재적응 '+t+'일':'')+'</span></span>'
+      +'<button class="mini-btn" data-i="'+i+'">삭제</button></div>';
+  }).join(''):'<p class="muted">등록된 휴지 기간이 없습니다.</p>';
+  el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{
+    const ps2=pauseList().slice().sort((a,b)=>a.from<b.from?-1:1);
+    const target=ps2[Number(b.dataset.i)];
+    if(!confirm('이 휴지 기간을 삭제할까요? 해당 날짜가 다시 프로그램에 포함됩니다.')) return;
+    db.settings.pauses=pauseList().filter(p=>!(p.from===target.from&&p.to===target.to));
+    saveSettings(); renderAll();
+  });
 }
 function renderHolidays(){
   const hl=document.getElementById('holidayList'); if(!hl) return;
@@ -1150,10 +1514,10 @@ function addHolidayPrompt(){
   if(!nd) return;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(nd)){ alert('YYYY-MM-DD 형식으로 입력하세요.'); return; }
   const name=prompt('공휴일 이름(선택)','공휴일')||'공휴일';
-  db.settings.holidays[nd]=name; save(); renderAll();
+  db.settings.holidays[nd]=name; saveSettings(); renderAll();
 }
 function removeHoliday(ds){
-  delete db.settings.holidays[ds]; save(); renderAll();
+  delete db.settings.holidays[ds]; saveSettings(); renderAll();
 }
 function renderBackupMsg(){
   const lb=db.settings.lastBackup;
@@ -1163,14 +1527,14 @@ function renderBackupMsg(){
 function isFastIgnoring(ds,ignoreDs){ if(ds===ignoreDs) return false; return isFast(ds); }
 function toggleFast(ds,on){
   if(on&&(isFast(addDays(ds,-1))||isFast(addDays(ds,1)))){ alert('연속 이틀 단식은 할 수 없습니다. 하루 이상 간격을 두세요.'); return; }
-  db.settings.fastOverride[ds]=on; save(); renderAll();
+  db.settings.fastOverride[ds]=on; saveSettings(); renderAll();
 }
 function moveFast(ds){
   const nd=prompt('새 단식 날짜를 입력하세요 (예: '+addDays(ds,1)+')',ds);
   if(!nd||!/^\d{4}-\d{2}-\d{2}$/.test(nd)){ if(nd) alert('YYYY-MM-DD 형식으로 입력하세요.'); return; }
   if(nd===ds){ return; }
   if(isFastIgnoring(addDays(nd,-1),ds)||isFastIgnoring(addDays(nd,1),ds)){ alert('연속 이틀 단식은 할 수 없습니다.'); return; }
-  db.settings.fastOverride[ds]=false; db.settings.fastOverride[nd]=true; save(); renderAll();
+  db.settings.fastOverride[ds]=false; db.settings.fastOverride[nd]=true; saveSettings(); renderAll();
 }
 function addFastPrompt(){
   const nd=prompt('추가할 단식 날짜 (YYYY-MM-DD)');
@@ -1186,7 +1550,7 @@ function exportJson(){
   a.href=URL.createObjectURL(blob);
   a.download='switchon-backup-'+todayStr()+'.json';
   a.click(); URL.revokeObjectURL(a.href);
-  db.settings.lastBackup=Date.now(); save(); renderAll();
+  db.settings.lastBackup=Date.now(); saveSettings(); renderAll();
 }
 function importJson(file){
   const rd=new FileReader();
@@ -1195,8 +1559,10 @@ function importJson(file){
       const d=JSON.parse(rd.result);
       if(!d.settings||!d.days) throw 0;
       if(confirm('현재 데이터를 백업 파일 내용으로 교체합니다. 진행할까요?')){
-        db=normalize(d); db.updatedAt=Date.now();
-        Object.keys(db.days).forEach(k=>{ db.days[k]._ts=Date.now(); });
+        const now=Date.now(), old=Object.keys(db.days);
+        db=normalize(d); db.updatedAt=now; db.settings.updatedAt=now;
+        old.forEach(ds=>{ if(!db.days[ds]) db.days[ds]={_deleted:true,_ts:now}; });
+        Object.keys(db.days).forEach(k=>{ db.days[k]._ts=now; });
         save(null); renderAll();
         if(window.__cloud&&window.__cloud.active()) window.__cloud.pushNow(true);
         alert('복원 완료');
@@ -1206,10 +1572,10 @@ function importJson(file){
   rd.readAsText(file);
 }
 function copyText(){
-  const days=Object.keys(db.days).sort().slice(-7);
+  const days=liveDates().sort().slice(-7);
   let t='📋 스위치온 다이어트 기록 ('+todayStr()+' 기준 최근 7일)\n';
   days.forEach(ds=>{
-    const r=db.days[ds]; const e=effDay(ds);
+    const r=liveDay(ds)||{}; const e=effDay(ds);
     const plan=buildPlan(ds);
     const dn=plan.filter(p=>r.checks&&r.checks[p.id]).length;
     t+='\n■ '+korDate(ds)+(e?' ('+e+'일차'+(isFast(ds)?', 단식일':'')+')':'')+'\n';
@@ -1224,7 +1590,7 @@ function copyText(){
     if(r.deviation) t+='  ⚠ 이탈: '+(r.deviation==='meal'?'한 끼':'하루')+'\n';
     if(r.memo) t+='  메모: '+r.memo+'\n';
   });
-  const done=()=>{ db.settings.lastBackup=Date.now(); save(); renderAll(); alert('복사 완료! 삼성 노트에 붙여넣으세요.'); };
+  const done=()=>{ db.settings.lastBackup=Date.now(); saveSettings(); renderAll(); alert('복사 완료! 삼성 노트에 붙여넣으세요.'); };
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>fallbackCopy(t,done)); }
   else fallbackCopy(t,done);
 }
@@ -1317,26 +1683,82 @@ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>document.getE
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
 
 /* 설정 이벤트 */
-document.getElementById('startDate').onchange=e=>{ db.settings.startDate=e.target.value||null; save(); renderAll(); };
-document.getElementById('skipBtn').onclick=()=>{ db.settings.skipPhase1=!db.settings.skipPhase1; save(); renderAll(); };
-document.getElementById('resetTimes').onclick=()=>{ db.settings.planTimes={}; save(); renderAll(); };
+document.getElementById('startDate').onchange=e=>{ db.settings.startDate=e.target.value||null; saveSettings(); renderAll(); };
+document.getElementById('skipBtn').onclick=()=>{ db.settings.skipPhase1=!db.settings.skipPhase1; saveSettings(); renderAll(); };
+document.getElementById('pauseAdd').onclick=()=>{
+  const f=document.getElementById('pauseFrom').value, t=document.getElementById('pauseTo').value;
+  const reason=document.getElementById('pauseReason').value;
+  if(!f||!t){ alert('시작일과 종료일을 모두 입력하세요.'); return; }
+  if(t<f){ alert('종료일이 시작일보다 빠릅니다.'); return; }
+  const len=dayDiff(f,t)+1;
+  if(len>14){ alert('한 번에 등록할 수 있는 휴지 기간은 최대 14일입니다. 나눠서 등록하세요.'); return; }
+  if(pauseList().some(p=>!(t<p.from||f>p.to))){ alert('이미 등록된 휴지 기간과 겹칩니다.'); return; }
+  db.settings.pauses=pauseList().concat([{from:f,to:t,reason}]);
+  saveSettings(); renderAll();
+  document.getElementById('pauseFrom').value=''; document.getElementById('pauseTo').value='';
+  alert(len+'일 휴지 기간을 등록했습니다. 복귀 후 '+(adaptTotal(len)||0)+'일간 재적응 플랜이 적용됩니다.');
+};
+document.getElementById('timeEditBtn').onclick=()=>{ timeEditMode=!timeEditMode; renderTodayHeader(); };
+document.getElementById('resetTimes').onclick=()=>{ db.settings.planTimes={}; saveSettings(); renderAll(); };
 document.getElementById('exportJson').onclick=exportJson;
 document.getElementById('importJsonBtn').onclick=()=>document.getElementById('importJson').click();
 document.getElementById('importJson').onchange=e=>{ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=''; };
 document.getElementById('copyText').onclick=copyText;
 document.getElementById('resetAll').onclick=()=>{
   if(confirm('모든 기록과 설정을 삭제합니다. JSON 백업을 먼저 했는지 확인하세요. 진행할까요?')){
-    db=normalize({settings:{},days:{}}); db.updatedAt=Date.now(); save(null); renderAll();
+    const now=Date.now(), old=Object.keys(db.days);
+    db=normalize({settings:{},days:{}});
+    old.forEach(ds=>{ db.days[ds]={_deleted:true,_ts:now}; });   /* 삭제 표식이 다른 기기로 전파된다 */
+    db.updatedAt=now; db.settings.updatedAt=now; save(null); renderAll();
     if(window.__cloud&&window.__cloud.active()) window.__cloud.pushNow(true);
   }
 };
 
-/* 체중 그래프 보기 전환 (일별/주별) */
-document.querySelectorAll('#weightViewSeg button').forEach(b=>b.onclick=()=>{
-  weightView=b.dataset.v;
-  document.querySelectorAll('#weightViewSeg button').forEach(x=>x.classList.toggle('sel',x===b));
-  renderWeightChart();
+/* 그래프 기간 조절 */
+document.querySelectorAll('#rangeSeg button').forEach(b=>b.onclick=()=>{
+  chartRange=Number(b.dataset.v); chartOffset=0;
+  document.querySelectorAll('#rangeSeg button').forEach(x=>x.classList.toggle('sel',x===b));
+  renderWeightChart(); renderPainChart();
 });
+document.getElementById('rPrev').onclick=()=>{ if(!chartRange) return; chartOffset+=Math.max(1,Math.round(chartRange/2)); renderWeightChart(); renderPainChart(); };
+document.getElementById('rNext').onclick=()=>{ if(!chartRange) return; chartOffset=Math.max(0,chartOffset-Math.max(1,Math.round(chartRange/2))); renderWeightChart(); renderPainChart(); };
+/* 좌우로 끌어 기간 이동 */
+['weightChartWrap','painChartWrap'].forEach(id=>{
+  const el=document.getElementById(id); if(!el) return;
+  let x0=null,o0=0;
+  el.addEventListener('pointerdown',e=>{ if(!chartRange) return; x0=e.clientX; o0=chartOffset; });
+  el.addEventListener('pointermove',e=>{
+    if(x0===null||!chartRange) return;
+    const px=Math.max(1,el.clientWidth||360)/chartRange;
+    const shift=Math.round((e.clientX-x0)/px);
+    const next=Math.max(0,o0+shift);
+    if(next!==chartOffset){ chartOffset=next; renderWeightChart(); renderPainChart(); }
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>el.addEventListener(ev,()=>{x0=null;}));
+});
+
+/* 체성분 */
+document.getElementById('bodyDate').onchange=()=>renderBody();
+document.getElementById('bodySave').onclick=()=>{
+  const ds=document.getElementById('bodyDate').value;
+  if(!ds){ alert('측정일을 선택하세요.'); return; }
+  const num=id=>{ const v=document.getElementById(id).value; return v===''?undefined:Number(v); };
+  const weight=num('bWeight');
+  if(weight===undefined){ alert('체중은 필수입니다.'); return; }
+  const r=dayRec(ds);
+  r.body={weight, fatPct:num('bFat'), muscleKg:num('bMuscle'), boneKg:num('bBone'), waterPct:num('bWater')};
+  Object.keys(r.body).forEach(k=>{ if(r.body[k]===undefined) delete r.body[k]; });
+  save(ds);
+  const m=document.getElementById('bodyMsg'); m.textContent='저장됨 ✓'; setTimeout(()=>m.textContent='',2000);
+  renderBody(); renderCal();
+};
+document.getElementById('bodyDelete').onclick=()=>{
+  const ds=document.getElementById('bodyDate').value;
+  const r=liveDay(ds);
+  if(!r||!r.body){ alert('그 날짜에는 체성분 기록이 없습니다.'); return; }
+  if(!confirm(korDate(ds)+' 체성분 기록을 삭제할까요?')) return;
+  delete r.body; save(ds); renderBody();
+};
 
 /* 달력 이동 */
 document.getElementById('calPrev').onclick=()=>{ calMonth.m--; if(calMonth.m<0){calMonth.m=11;calMonth.y--;} renderCal(); };
